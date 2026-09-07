@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>데일리 헬스 & 피트니스 다이어리</title>
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --primary-soft: #eff6ff;
+      --success: #10b981;
+      --success-soft: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-soft: #fffbeb;
+      --purple: #8b5cf6;
+      --purple-soft: #f5f3ff;
+      --pink: #ec4899;
+      --pink-soft: #fdf2f8;
+      --slate-800: #1e293b;
+      --slate-600: #475569;
+      --slate-400: #94a3b8;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background-color: var(--bg);
+      color: var(--slate-800);
+      line-height: 1.5;
+      padding: 16px 12px 60px;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding: 6px 0;
+    }
+
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--slate-800);
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      font-size: 0.82rem;
+      color: var(--slate-600);
+      margin-top: 4px;
+    }
+
+    /* 3단 탭 네비게이션 */
+    .tab-bar {
+      display: flex;
+      background: #e2e8f0;
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 16px;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 9px 0;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--slate-600);
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    /* 카드 시스템 공통 */
+    .section-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      border: 1px solid #eef2f6;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--slate-100);
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: -0.2px;
+    }
+
+    .badge-meal { background: var(--warning-soft); color: #d97706; }
+    .badge-workout { background: var(--primary-soft); color: var(--primary); }
+    .badge-condition { background: var(--success-soft); color: var(--success); }
+    .badge-clinic { background: var(--purple-soft); color: var(--purple); }
+    .badge-cycle { background: var(--pink-soft); color: var(--pink); }
+
+    .section-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--slate-800);
+    }
+
+    /* 폼 요소 */
+    .field-group {
+      margin-bottom: 12px;
+    }
+
+    .field-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--slate-600);
+      margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.9rem;
+      color: var(--slate-800);
+      background-color: #fafbfc;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      background-color: #fff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 64px;
+    }
+
+    /* 라디오 태그 */
+    .radio-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .radio-card input {
+      display: none;
+    }
+
+    .radio-card label {
+      display: block;
+      text-align: center;
+      padding: 9px 4px;
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: var(--slate-600);
+      cursor: pointer;
+      background: #fafbfc;
+      margin-bottom: 0;
+      transition: all 0.2s;
+    }
+
+    .radio-card input:checked + label {
+      background: var(--pink-soft);
+      border-color: var(--pink);
+      color: var(--pink);
+      font-weight: 700;
+    }
+
+    /* 사진 업로드 커스텀 스타일 */
+    .photo-uploader {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      padding: 10px;
+      background: #f8fafc;
+      border: 1px dashed var(--slate-300, #cbd5e1);
+      border-radius: 10px;
+    }
+
+    .photo-input-label {
+      background: #fff;
+      border: 1px solid var(--slate-300, #cbd5e1);
+      color: var(--slate-600);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .photo-input-label:active {
+      background: var(--slate-100);
+    }
+
+    .preview-box {
+      width: 58px;
+      height: 58px;
+      border-radius: 8px;
+      background: #e2e8f0;
+      overflow: hidden;
+      display: none;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-box .remove-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 11px;
+      line-height: 18px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    /* 버튼 */
+    .btn-submit {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+      margin-top: 10px;
+      transition: background 0.2s;
+    }
+
+    .btn-submit:active {
+      background: #2563eb;
+    }
+
+    /* 대시보드 전용 스타일 */
+    .period-toggle {
+      display: flex;
+      background: #e2e8f0;
+      border-radius: 8px;
+      padding: 3px;
+      margin-bottom: 14px;
+      gap: 3px;
+    }
+
+    .period-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 7px 0;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--slate-600);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .period-btn.active {
+      background: var(--slate-800);
+      color: #fff;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .kpi-card {
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .kpi-num {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--slate-800);
+      margin-top: 4px;
+    }
+
+    .kpi-label {
+      font-size: 0.74rem;
+      color: var(--slate-600);
+      font-weight: 600;
+    }
+
+    .stat-list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--slate-200);
+      font-size: 0.85rem;
+    }
+
+    .stat-list-item:last-child {
+      border-bottom: none;
+    }
+
+    /* 뷰어 카드 내 사진 갤러리 */
+    .record-gallery {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .thumb-wrap {
+      width: 76px;
+      height: 76px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1px solid var(--slate-200);
+      cursor: pointer;
+    }
+
+    .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* 히스토리 카드 */
+    .history-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+
+    .history-date {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--slate-800);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1.5px dashed var(--slate-200);
+    }
+
+    .del-btn {
+      background: #fee2e2;
+      color: #ef4444;
+      border: none;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .log-item {
+      margin-bottom: 12px;
+      font-size: 0.86rem;
+      line-height: 1.5;
+    }
+
+    .log-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 10px;
+      color: var(--slate-400);
+      font-size: 0.9rem;
+    }
+
+    /* 모달 (사진 확대) */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal img {
+      max-width: 100%;
+      max-height: 80vh;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>📋 데일리 피트니스 & 헬스 일지</h1>
+    <p>트레이너와 공유하는 식단·운동·건강 관리</p>
+  </header>
+
+  <!-- 상단 모드 전환 탭 (대시보드 / 일지보기 / 기록작성) -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-dashboard-btn" onclick="switchTab('dashboard')">📊 대시보드</button>
+    <button class="tab-btn" id="tab-list-btn" onclick="switchTab('list')">📖 일지 보기</button>
+    <button class="tab-btn" id="tab-write-btn" onclick="switchTab('write')">✍️ 기록 작성</button>
+  </div>
+
+  <!-- 1. 대시보드 화면 (주간 / 월간 통계 요약) -->
+  <div id="view-dashboard">
+    <div class="period-toggle">
+      <button class="period-btn active" id="period-week-btn" onclick="changePeriod('week')">최근 7일 (주간)</button>
+      <button class="period-btn" id="period-month-btn" onclick="changePeriod('month')">최근 30일 (월간)</button>
+    </div>
+
+    <!-- KPI 요약 카드 -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">🏋️ 운동 완료 일수</div>
+        <div class="kpi-num" id="stat-workout-days">0일</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">🥗 식단 기록 일수</div>
+        <div class="kpi-num" id="stat-meal-days">0일</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">📷 인증 사진 업로드</div>
+        <div class="kpi-num" id="stat-photo-count">0장</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">🏥 병원 방문 횟수</div>
+        <div class="kpi-num" id="stat-hospital-count">0회</div>
+      </div>
+    </div>
+
+    <!-- 종목별 운동 통계 -->
+    <div class="section-card">
+      <div class="section-header">
+        <span class="badge badge-workout">종목 통계</span>
+        <span class="section-title">수행한 운동 종목 분포</span>
+      </div>
+      <div id="workout-type-stats">
+        <div style="color: var(--slate-400); font-size: 0.85rem; text-align: center; padding: 10px;">기록된 운동이 없습니다.</div>
+      </div>
+    </div>
+
+    <!-- 월경 주기 요약 -->
+    <div class="section-card">
+      <div class="section-header">
+        <span class="badge badge-cycle">주기 상태</span>
+        <span class="section-title">최근 월경 기록 현황</span>
+      </div>
+      <div id="cycle-summary-content" style="font-size: 0.88rem; color: var(--slate-600); line-height: 1.6;">
+        기록된 월경 정보가 없습니다.
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 작성 화면 -->
+  <div id="view-write" style="display: none;">
+    <form id="recordForm" onsubmit="saveRecord(event)">
+      <!-- 기본 정보 (일자) -->
+      <div class="section-card">
+        <div class="field-group">
+          <label for="recordDate">📅 기록 일자</label>
+          <input type="date" id="recordDate" required>
+        </div>
+      </div>
+
+      <!-- 1. 식단 기록 & 사진 증명 -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="badge badge-meal">식단</span>
+          <span class="section-title">식사 / 간식 및 식단 인증</span>
+        </div>
+        <div class="field-group">
+          <label for="breakfast">아침 식사</label>
+          <input type="text" id="breakfast" placeholder="예: 현미밥 130g, 닭가슴살 100g, 아메리카노">
+        </div>
+        <div class="field-group">
+          <label for="lunch">점심 식사</label>
+          <input type="text" id="lunch" placeholder="예: 백반 (밥 2/3 공기, 생선구이, 나물류)">
+        </div>
+        <div class="field-group">
+          <label for="dinner">저녁 식사</label>
+          <input type="text" id="dinner" placeholder="예: 단호박 150g, 삶은 달걀 2개, 샐러드">
+        </div>
+        <div class="field-group">
+          <label for="snack">간식 / 수분</label>
+          <input type="text" id="snack" placeholder="예: 견과류 1봉, 프로틴 1회분, 물 1.5L">
+        </div>
+        
+        <!-- 식단 사진 업로드 -->
+        <div class="field-group" style="margin-top: 10px;">
+          <label>📸 식단 인증 사진</label>
+          <div class="photo-uploader">
+            <input type="file" id="mealPhotoInput" accept="image/*" style="display:none" onchange="handleImageSelect(event, 'meal')">
+            <label for="mealPhotoInput" class="photo-input-label">📷 사진 선택 / 촬영</label>
+            <div id="mealPreviewBox" class="preview-box">
+              <img id="mealPreviewImg" src="" alt="식단 미리보기">
+              <button type="button" class="remove-btn" onclick="clearPhoto('meal')">×</button>
+            </div>
+            <span id="mealPhotoStatus" style="font-size: 0.78rem; color: var(--slate-400);">등록된 사진 없음</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 운동 기록 & 사진 증명 -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="badge badge-workout">운동</span>
+          <span class="section-title">트레이닝 내용 & 오운완 인증</span>
+        </div>
+        <div class="field-group">
+          <label for="exerciseType">운동 종목 선택</label>
+          <select id="exerciseType">
+            <option value="">종목을 선택해주세요</option>
+            <option value="웨이트 트레이닝">웨이트 트레이닝</option>
+            <option value="유산소 (러닝/사이클/계단)">유산소 (러닝/사이클/계단)</option>
+            <option value="필라테스 / 요가">필라테스 / 요가</option>
+            <option value="수영">수영</option>
+            <option value="스트레칭 / 맨몸운동">스트레칭 / 맨몸운동</option>
+            <option value="기타">기타 활동</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="exerciseDetail">운동 내용 및 강도 / 수행 시간</label>
+          <textarea id="exerciseDetail" placeholder="예: 스쿼트 40kg 15회 4세트, 런닝머신 인터벌 30분. RPE 7(중상 강도)"></textarea>
+        </div>
+
+        <!-- 운동 인증 사진 -->
+        <div class="field-group" style="margin-top: 10px;">
+          <label>📸 오운완 / 스마트워치 인증 사진</label>
+          <div class="photo-uploader">
+            <input type="file" id="workoutPhotoInput" accept="image/*" style="display:none" onchange="handleImageSelect(event, 'workout')">
+            <label for="workoutPhotoInput" class="photo-input-label">📷 사진 선택 / 촬영</label>
+            <div id="workoutPreviewBox" class="preview-box">
+              <img id="workoutPreviewImg" src="" alt="운동 미리보기">
+              <button type="button" class="remove-btn" onclick="clearPhoto('workout')">×</button>
+            </div>
+            <span id="workoutPhotoStatus" style="font-size: 0.78rem; color: var(--slate-400);">등록된 사진 없음</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 컨디션 기록 -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="badge badge-condition">컨디션</span>
+          <span class="section-title">오늘의 신체 컨디션 & 수면</span>
+        </div>
+        <div class="field-group">
+          <label for="conditionText">몸 상태 (피로도, 근육통, 수면 등)</label>
+          <textarea id="conditionText" placeholder="예: 수면 7시간. 기상 시 오른쪽 어깨 약간 뻐근함 있었으나 스트레칭 후 완화됨. 피로도 보통"></textarea>
+        </div>
+      </div>
+
+      <!-- 4. 병원 방문 기록 -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="badge badge-clinic">병원 방문</span>
+          <span class="section-title">의료 상담 및 치료 메모</span>
+        </div>
+        <div class="field-group">
+          <label for="hospitalMemo">진료 내용 및 의사 권고 사항</label>
+          <textarea id="hospitalMemo" placeholder="예: 정형외과 진료. 허리 부담 주는 고중량 리프팅 자제 권고, 코어 강화 및 햄스트링 이완 추천"></textarea>
+        </div>
+      </div>
+
+      <!-- 5. 월경 기록 -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="badge badge-cycle">월경 기록</span>
+          <span class="section-title">생리 주기 및 출혈량</span>
+        </div>
+        <div class="field-group">
+          <label>생리 여부 및 출혈량</label>
+          <div class="radio-group">
+            <div class="radio-card">
+              <input type="radio" id="flow-none" name="flow" value="해당없음" checked>
+              <label for="flow-none">해당없음</label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" id="flow-low" name="flow" value="적음">
+              <label for="flow-low">적음</label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" id="flow-mid" name="flow" value="보통">
+              <label for="flow-mid">보통</label>
+            </div>
+          </div>
+          <div class="radio-group" style="margin-top: 6px;">
+            <div class="radio-card" style="grid-column: span 3;">
+              <input type="radio" id="flow-high" name="flow" value="많음">
+              <label for="flow-high">많음 (1~2일차 수준)</label>
+            </div>
+          </div>
+        </div>
+        <div class="field-group" style="margin-top: 10px;">
+          <label for="cycleMemo">주기 특이사항 (생리통/컨디션 저하)</label>
+          <input type="text" id="cycleMemo" placeholder="예: 생리 2일차, 하복부 묵직한 통증으로 약 복용">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit">기록 저장하기</button>
+    </form>
+  </div>
+
+  <!-- 3. 일지 목록 화면 (트레이너 열람용 상세) -->
+  <div id="view-list" style="display: none;">
+    <div id="recordsContainer"></div>
+  </div>
+</div>
+
+<!-- 이미지 확대 모달 -->
+<div id="imageModal" class="modal" onclick="closeModal()">
+  <img id="modalImg" src="" alt="확대 이미지">
+</div>
+
+<script>
+  let currentMealBase64 = '';
+  let currentWorkoutBase64 = '';
+  let currentPeriod = 'week';
+
+  document.getElementById('recordDate').valueAsDate = new Date();
+
+  // 모바일 사진 압축 리사이징 (용량 초과 방지: 최대 600px, JPEG 0.7)
+  function handleImageSelect(event, type) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 600;
+
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+        if (type === 'meal') {
+          currentMealBase64 = compressedBase64;
+          document.getElementById('mealPreviewImg').src = compressedBase64;
+          document.getElementById('mealPreviewBox').style.display = 'block';
+          document.getElementById('mealPhotoStatus').innerText = '식단 사진 첨부됨';
+        } else {
+          currentWorkoutBase64 = compressedBase64;
+          document.getElementById('workoutPreviewImg').src = compressedBase64;
+          document.getElementById('workoutPreviewBox').style.display = 'block';
+          document.getElementById('workoutPhotoStatus').innerText = '운동 사진 첨부됨';
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearPhoto(type) {
+    if (type === 'meal') {
+      currentMealBase64 = '';
+      document.getElementById('mealPhotoInput').value = '';
+      document.getElementById('mealPreviewBox').style.display = 'none';
+      document.getElementById('mealPhotoStatus').innerText = '등록된 사진 없음';
+    } else {
+      currentWorkoutBase64 = '';
+      document.getElementById('workoutPhotoInput').value = '';
+      document.getElementById('workoutPreviewBox').style.display = 'none';
+      document.getElementById('workoutPhotoStatus').innerText = '등록된 사진 없음';
+    }
+  }
+
+  // 탭 전환
+  function switchTab(tab) {
+    const dView = document.getElementById('view-dashboard');
+    const wView = document.getElementById('view-write');
+    const lView = document.getElementById('view-list');
+
+    const dBtn = document.getElementById('tab-dashboard-btn');
+    const wBtn = document.getElementById('tab-write-btn');
+    const lBtn = document.getElementById('tab-list-btn');
+
+    [dView, wView, lView].forEach(v => v.style.display = 'none');
+    [dBtn, wBtn, lBtn].forEach(b => b.classList.remove('active'));
+
+    if (tab === 'dashboard') {
+      dView.style.display = 'block';
+      dBtn.classList.add('active');
+      renderDashboard();
+    } else if (tab === 'write') {
+      wView.style.display = 'block';
+      wBtn.classList.add('active');
+    } else {
+      lView.style.display = 'block';
+      lBtn.classList.add('active');
+      renderRecords();
+    }
+  }
+
+  function changePeriod(period) {
+    currentPeriod = period;
+    document.getElementById('period-week-btn').classList.toggle('active', period === 'week');
+    document.getElementById('period-month-btn').classList.toggle('active', period === 'month');
+    renderDashboard();
+  }
+
+  // 데이터 저장
+  function saveRecord(e) {
+    e.preventDefault();
+
+    const dateVal = document.getElementById('recordDate').value;
+    const selectedFlow = document.querySelector('input[name="flow"]:checked').value;
+
+    const newRecord = {
+      id: Date.now(),
+      date: dateVal,
+      meals: {
+        breakfast: document.getElementById('breakfast').value.trim(),
+        lunch: document.getElementById('lunch').value.trim(),
+        dinner: document.getElementById('dinner').value.trim(),
+        snack: document.getElementById('snack').value.trim(),
+        photo: currentMealBase64
+      },
+      workout: {
+        type: document.getElementById('exerciseType').value,
+        detail: document.getElementById('exerciseDetail').value.trim(),
+        photo: currentWorkoutBase64
+      },
+      condition: document.getElementById('conditionText').value.trim(),
+      hospital: document.getElementById('hospitalMemo').value.trim(),
+      cycle: {
+        flow: selectedFlow,
+        memo: document.getElementById('cycleMemo').value.trim()
+      }
+    };
+
+    let records = JSON.parse(localStorage.getItem('fitness_diary_data') || '[]');
+    records = records.filter(r => r.date !== dateVal);
+    records.push(newRecord);
+    records.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    try {
+      localStorage.setItem('fitness_diary_data', JSON.stringify(records));
+      alert('일지가 성공적으로 저장되었습니다!');
+      // 폼 리셋
+      clearPhoto('meal');
+      clearPhoto('workout');
+      document.getElementById('exerciseType').value = '';
+      document.getElementById('breakfast').value = '';
+      document.getElementById('lunch').value = '';
+      document.getElementById('dinner').value = '';
+      document.getElementById('snack').value = '';
+      document.getElementById('exerciseDetail').value = '';
+      document.getElementById('conditionText').value = '';
+      document.getElementById('hospitalMemo').value = '';
+      document.getElementById('cycleMemo').value = '';
+      document.getElementById('flow-none').checked = true;
+
+      switchTab('dashboard');
+    } catch (err) {
+      alert('브라우저 용량이 초과되었습니다. 사진을 줄이거나 오래된 기록을 삭제해주세요.');
+    }
+  }
+
+  // 대시보드 통계 계산 및 렌더링
+  function renderDashboard() {
+    const records = JSON.parse(localStorage.getItem('fitness_diary_data') || '[]');
+    const daysLimit = currentPeriod === 'week' ? 7 : 30;
+
+    const now = new Date();
+    const filtered = records.filter(item => {
+      const recordDate = new Date(item.date);
+      const diffTime = now - recordDate;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= daysLimit;
+    });
+
+    // 지표 계산
+    let workoutDays = 0;
+    let mealDays = 0;
+    let photoCount = 0;
+    let hospitalCount = 0;
+    const typeCountMap = {};
+
+    filtered.forEach(r => {
+      if (r.workout.type || r.workout.detail || r.workout.photo) workoutDays++;
+      if (r.meals.breakfast || r.meals.lunch || r.meals.dinner || r.meals.snack || r.meals.photo) mealDays++;
+      if (r.meals.photo) photoCount++;
+      if (r.workout.photo) photoCount++;
+      if (r.hospital) hospitalCount++;
+
+      if (r.workout.type) {
+        typeCountMap[r.workout.type] = (typeCountMap[r.workout.type] || 0) + 1;
+      }
+    });
+
+    document.getElementById('stat-workout-days').innerText = `${workoutDays}일`;
+    document.getElementById('stat-meal-days').innerText = `${mealDays}일`;
+    document.getElementById('stat-photo-count').innerText = `${photoCount}장`;
+    document.getElementById('stat-hospital-count').innerText = `${hospitalCount}회`;
+
+    // 운동 종목 분포
+    const typeStatContainer = document.getElementById('workout-type-stats');
+    const typeKeys = Object.keys(typeCountMap);
+    if (typeKeys.length === 0) {
+      typeStatContainer.innerHTML = '<div style="color: var(--slate-400); font-size: 0.85rem; text-align: center; padding: 8px;">선택된 기간 내 기록된 운동이 없습니다.</div>';
+    } else {
+      let statsHtml = '';
+      typeKeys.forEach(k => {
+        statsHtml += `
+          <div class="stat-list-item">
+            <span style="font-weight:600; color:var(--slate-800);">🏋️ ${k}</span>
+            <span style="font-weight:700; color:var(--primary);">${typeCountMap[k]}회 수행</span>
+          </div>
+        `;
+      });
+      typeStatContainer.innerHTML = statsHtml;
+    }
+
+    // 월경 요약
+    const cycleContainer = document.getElementById('cycle-summary-content');
+    const recentCycle = records.find(r => r.cycle && r.cycle.flow !== '해당없음');
+    if (recentCycle) {
+      cycleContainer.innerHTML = `
+        <div>• <b>가장 최근 기록일:</b> ${recentCycle.date}</div>
+        <div>• <b>출혈량:</b> <span style="color:var(--pink); font-weight:700;">${recentCycle.cycle.flow}</span></div>
+        ${recentCycle.cycle.memo ? `<div>• <b>특이사항:</b> ${recentCycle.cycle.memo}</div>` : ''}
+      `;
+    } else {
+      cycleContainer.innerHTML = '최근 기록된 월경 정보가 없습니다.';
+    }
+  }
+
+  // 일지 목록 렌더링
+  function renderRecords() {
+    const container = document.getElementById('recordsContainer');
+    const records = JSON.parse(localStorage.getItem('fitness_diary_data') || '[]');
+
+    if (records.length === 0) {
+      container.innerHTML = '<div class="empty-state">등록된 일지가 없습니다.<br>"기록 작성" 탭에서 첫 일지를 작성해보세요.</div>';
+      return;
+    }
+
+    let html = '';
+    records.forEach(item => {
+      html += `
+        <div class="history-card">
+          <div class="history-date">
+            <span>📅 ${item.date}</span>
+            <button class="del-btn" onclick="deleteRecord(${item.id})">삭제</button>
+          </div>
+
+          <!-- 식단 -->
+          <div class="log-item">
+            <span class="badge badge-meal">식단</span><br>
+            ${item.meals.breakfast ? `<div>• <b>아침:</b> ${item.meals.breakfast}</div>` : ''}
+            ${item.meals.lunch ? `<div>• <b>점심:</b> ${item.meals.lunch}</div>` : ''}
+            ${item.meals.dinner ? `<div>• <b>저녁:</b> ${item.meals.dinner}</div>` : ''}
+            ${item.meals.snack ? `<div>• <b>간식/수분:</b> ${item.meals.snack}</div>` : ''}
+            ${item.meals.photo ? `
+              <div class="record-gallery">
+                <div class="thumb-wrap" onclick="openModal('${item.meals.photo}')">
+                  <img src="${item.meals.photo}" alt="식단 사진">
+                </div>
+              </div>` : ''}
+          </div>
+
+          <!-- 운동 -->
+          <div class="log-item">
+            <span class="badge badge-workout">운동</span><br>
+            ${item.workout.type ? `<b>[${item.workout.type}]</b> ` : ''}
+            ${item.workout.detail ? item.workout.detail.replace(/\n/g, '<br>') : '<span style="color:#94a3b8;">(세부 운동 미기록)</span>'}
+            ${item.workout.photo ? `
+              <div class="record-gallery">
+                <div class="thumb-wrap" onclick="openModal('${item.workout.photo}')">
+                  <img src="${item.workout.photo}" alt="운동 인증 사진">
+                </div>
+              </div>` : ''}
+          </div>
+
+          <!-- 컨디션 -->
+          <div class="log-item">
+            <span class="badge badge-condition">컨디션</span><br>
+            ${item.condition ? item.condition.replace(/\n/g, '<br>') : '<span style="color:#94a3b8;">(미기록)</span>'}
+          </div>
+
+          <!-- 병원 상담 -->
+          ${item.hospital ? `
+          <div class="log-item">
+            <span class="badge badge-clinic">병원 상담</span><br>
+            ${item.hospital.replace(/\n/g, '<br>')}
+          </div>` : ''}
+
+          <!-- 월경 -->
+          ${item.cycle.flow !== '해당없음' || item.cycle.memo ? `
+          <div class="log-item">
+            <span class="badge badge-cycle">월경 정보</span><br>
+            • <b>생리양:</b> ${item.cycle.flow}
+            ${item.cycle.memo ? `<br>• <b>메모:</b> ${item.cycle.memo}` : ''}
+          </div>` : ''}
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+  }
+
+  function deleteRecord(id) {
+    if (!confirm('해당 날짜의 기록을 삭제하시겠습니까?')) return;
+    let records = JSON.parse(localStorage.getItem('fitness_diary_data') || '[]');
+    records = records.filter(r => r.id !== id);
+    localStorage.setItem('fitness_diary_data', JSON.stringify(records));
+    renderRecords();
+  }
+
+  function openModal(src) {
+    document.getElementById('modalImg').src = src;
+    document.getElementById('imageModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('imageModal').style.display = 'none';
+  }
+
+  // 초기 로딩 시 대시보드 렌더링
+  renderDashboard();
+</script>
+
+</body>
+</html>
