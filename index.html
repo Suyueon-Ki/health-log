@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>데일리 헬스 & 피트니스 다이어리</title>
+  <!-- Firebase SDK (v10 compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
   <style>
     :root {
       --primary: #3b82f6;
@@ -449,20 +452,136 @@
       padding: 16px;
     }
 
-    .modal img {
+        .modal img {
       max-width: 100%;
       max-height: 80vh;
       border-radius: 10px;
+    }
+
+    /* 클라우드 동기화 바 */
+    .sync-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      font-size: 0.82rem;
+    }
+
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--slate-600);
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      display: inline-block;
+    }
+
+    .status-dot.syncing {
+      background: var(--warning);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    .share-btn {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+
+    .share-btn:active {
+      background: #dbeafe;
+    }
+
+    .viewer-banner {
+      display: none;
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      font-size: 0.82rem;
+      color: #1e40af;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .viewer-banner button {
+      background: #fff;
+      border: 1px solid #93c5fd;
+      color: #1e40af;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.9);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <header>
+    <header>
     <h1>📋 데일리 피트니스 & 헬스 일지</h1>
-    <p>트레이너와 공유하는 식단·운동·건강 관리</p>
+    <p>식단 · 운동 · 건강 클라우드 관리</p>
   </header>
+
+  <!-- 조회 전용 모드 안내 바 (공유받은 사람이 접속했을 때 노출) -->
+  <div id="viewerBanner" class="viewer-banner">
+    <span>👁️ <b>공유받은 일지 열람 모드</b> (읽기 전용)</span>
+    <button onclick="exitShareMode()">내 일지로 가기</button>
+  </div>
+
+  <!-- 클라우드 동기화 및 공유 링크 생성 바 -->
+  <div class="sync-bar" id="syncBar">
+    <div class="sync-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="syncText">클라우드 연결됨</span>
+    </div>
+    <button class="share-btn" onclick="copyShareLink()">
+      🔗 일지 공유 링크 복사
+    </button>
+  </div>
 
   <!-- 상단 모드 전환 탭 (대시보드 / 일지보기 / 기록작성) -->
   <div class="tab-bar">
@@ -667,7 +786,7 @@
         </div>
       </div>
 
-      <button type="submit" class="btn-submit">기록 저장하기</button>
+            <button type="submit" id="submitBtn" class="btn-submit">기록 저장하기</button>
     </form>
   </div>
 
@@ -682,14 +801,141 @@
   <img id="modalImg" src="" alt="확대 이미지">
 </div>
 
+<!-- 알림 토스트 -->
+<div id="toast" class="toast"></div>
+
 <script>
+  // Firebase 초기화
+  const firebaseConfig = {
+    apiKey: "AIzaSyCCIuxI1ldv0KhkUFVnuTxh7KMLXKyz08g",
+    authDomain: "health-log-for-ki.firebaseapp.com",
+    projectId: "health-log-for-ki",
+    storageBucket: "health-log-for-ki.firebasestorage.app",
+    messagingSenderId: "919503877982",
+    appId: "1:919503877982:web:ed48964f98bd7db87e01cf",
+    measurementId: "G-GGGYD5NKJ4"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // 사용자 고유 ID (?user=xxx 쿼리 스트링 지원)
+  const urlParams = new URLSearchParams(window.location.search);
+  const shareUserParam = urlParams.get('user');
+
+  let currentUserId = localStorage.getItem('hl_user_id');
+  if (!currentUserId) {
+    currentUserId = 'user_' + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem('hl_user_id', currentUserId);
+  }
+
+  // 타인이 공유 링크로 접속했는지 확인 (조회 전용 모드)
+  const isViewOnly = !!shareUserParam && shareUserParam !== currentUserId;
+  const activeUserId = isViewOnly ? shareUserParam : currentUserId;
+
+  let recordsData = [];
   let currentMealBase64 = '';
   let currentWorkoutBase64 = '';
   let currentPeriod = 'week';
 
   document.getElementById('recordDate').valueAsDate = new Date();
 
-  // 모바일 사진 압축 리사이징 (용량 초과 방지: 최대 600px, JPEG 0.7)
+  if (isViewOnly) {
+    document.getElementById('viewerBanner').style.display = 'flex';
+    document.getElementById('syncBar').style.display = 'none';
+    const writeBtn = document.getElementById('tab-write-btn');
+    if (writeBtn) writeBtn.style.display = 'none';
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.innerText = msg;
+    toast.style.display = 'block';
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 2500);
+  }
+
+  function setSyncStatus(isSyncing, text) {
+    const dot = document.getElementById('statusDot');
+    const syncText = document.getElementById('syncText');
+    if (dot && syncText) {
+      if (isSyncing) {
+        dot.classList.add('syncing');
+        syncText.innerText = text || '동기화 중...';
+      } else {
+        dot.classList.remove('syncing');
+        syncText.innerText = text || '클라우드 동기화 완료';
+      }
+    }
+  }
+
+  function copyShareLink() {
+    const shareUrl = window.location.origin + window.location.pathname + '?user=' + currentUserId;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showToast('🔗 공유 링크가 복사되었습니다! 친구나 트레이너에게 전송하세요.');
+      }).catch(() => fallbackCopy(shareUrl));
+    } else {
+      fallbackCopy(shareUrl);
+    }
+  }
+
+  function fallbackCopy(text) {
+    const tempInput = document.createElement('input');
+    tempInput.value = text;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+    showToast('🔗 공유 링크가 복사되었습니다!');
+  }
+
+  function exitShareMode() {
+    window.location.href = window.location.origin + window.location.pathname;
+  }
+
+  // Firestore 실시간 리스너
+  function initDataListener() {
+    setSyncStatus(true, '데이터 불러오는 중...');
+    db.collection('users').doc(activeUserId).collection('records')
+      .orderBy('date', 'desc')
+      .onSnapshot((snapshot) => {
+        const loaded = [];
+        snapshot.forEach(doc => {
+          loaded.push({ ...doc.data(), docId: doc.id });
+        });
+        recordsData = loaded;
+
+        // 기존 localStorage 데이터가 있고 클라우드가 비어있으면 1회 자동 마이그레이션
+        if (!isViewOnly && recordsData.length === 0) {
+          migrateLocalDataToCloud();
+        }
+
+        renderDashboard();
+        renderRecords();
+        setSyncStatus(false, '최신 상태 유지 중');
+      }, (error) => {
+        console.error('Firestore 에러: ', error);
+        setSyncStatus(false, '오프라인 / 연결 확인');
+      });
+  }
+
+  async function migrateLocalDataToCloud() {
+    const local = JSON.parse(localStorage.getItem('fitness_diary_data') || '[]');
+    if (local.length > 0) {
+      setSyncStatus(true, '기존 로컬 데이터 클라우드로 이전 중...');
+      const batch = db.batch();
+      local.forEach(item => {
+        const docRef = db.collection('users').doc(activeUserId).collection('records').doc(item.date);
+        batch.set(docRef, item);
+      });
+      await batch.commit();
+      showToast('기존 로컬 기록이 클라우드로 안전하게 백업되었습니다!');
+    }
+  }
+
+  // 모바일 사진 압축 리사이징 (최대 550px, JPEG 0.65 -> Firestore 문서 용량 한도 내 저장)
   function handleImageSelect(event, type) {
     const file = event.target.files[0];
     if (!file) return;
@@ -701,7 +947,7 @@
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        const maxDim = 600;
+        const maxDim = 550;
 
         if (width > height && width > maxDim) {
           height = Math.round((height * maxDim) / width);
@@ -715,7 +961,7 @@
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.65);
 
         if (type === 'meal') {
           currentMealBase64 = compressedBase64;
@@ -759,13 +1005,14 @@
     const lBtn = document.getElementById('tab-list-btn');
 
     [dView, wView, lView].forEach(v => v.style.display = 'none');
-    [dBtn, wBtn, lBtn].forEach(b => b.classList.remove('active'));
+    [dBtn, wBtn, lBtn].forEach(b => b && b.classList.remove('active'));
 
     if (tab === 'dashboard') {
       dView.style.display = 'block';
       dBtn.classList.add('active');
       renderDashboard();
     } else if (tab === 'write') {
+      if (isViewOnly) return;
       wView.style.display = 'block';
       wBtn.classList.add('active');
     } else {
@@ -782,9 +1029,17 @@
     renderDashboard();
   }
 
-  // 데이터 저장
-  function saveRecord(e) {
+  // 데이터 클라우드 저장
+  async function saveRecord(e) {
     e.preventDefault();
+    if (isViewOnly) {
+      alert('공유받은 열람 모드에서는 작성할 수 없습니다.');
+      return;
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerText = '클라우드 저장 중...';
 
     const dateVal = document.getElementById('recordDate').value;
     const selectedFlow = document.querySelector('input[name="flow"]:checked').value;
@@ -809,17 +1064,14 @@
       cycle: {
         flow: selectedFlow,
         memo: document.getElementById('cycleMemo').value.trim()
-      }
+      },
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    let records = JSON.parse(localStorage.getItem('fitness_diary_data') || '[]');
-    records = records.filter(r => r.date !== dateVal);
-    records.push(newRecord);
-    records.sort((a, b) => new Date(b.date) - new Date(a.date));
-
     try {
-      localStorage.setItem('fitness_diary_data', JSON.stringify(records));
-      alert('일지가 성공적으로 저장되었습니다!');
+      await db.collection('users').doc(activeUserId).collection('records').doc(dateVal).set(newRecord);
+      showToast('☁️ 클라우드에 안전하게 저장되었습니다!');
+
       // 폼 리셋
       clearPhoto('meal');
       clearPhoto('workout');
@@ -836,24 +1088,25 @@
 
       switchTab('dashboard');
     } catch (err) {
-      alert('브라우저 용량이 초과되었습니다. 사진을 줄이거나 오래된 기록을 삭제해주세요.');
+      console.error(err);
+      alert('저장 중 오류가 발생했습니다: ' + err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerText = '기록 저장하기';
     }
   }
 
   // 대시보드 통계 계산 및 렌더링
   function renderDashboard() {
-    const records = JSON.parse(localStorage.getItem('fitness_diary_data') || '[]');
     const daysLimit = currentPeriod === 'week' ? 7 : 30;
-
     const now = new Date();
-    const filtered = records.filter(item => {
+    const filtered = recordsData.filter(item => {
       const recordDate = new Date(item.date);
       const diffTime = now - recordDate;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays >= 0 && diffDays <= daysLimit;
     });
 
-    // 지표 계산
     let workoutDays = 0;
     let mealDays = 0;
     let photoCount = 0;
@@ -861,13 +1114,13 @@
     const typeCountMap = {};
 
     filtered.forEach(r => {
-      if (r.workout.type || r.workout.detail || r.workout.photo) workoutDays++;
-      if (r.meals.breakfast || r.meals.lunch || r.meals.dinner || r.meals.snack || r.meals.photo) mealDays++;
-      if (r.meals.photo) photoCount++;
-      if (r.workout.photo) photoCount++;
+      if (r.workout && (r.workout.type || r.workout.detail || r.workout.photo)) workoutDays++;
+      if (r.meals && (r.meals.breakfast || r.meals.lunch || r.meals.dinner || r.meals.snack || r.meals.photo)) mealDays++;
+      if (r.meals && r.meals.photo) photoCount++;
+      if (r.workout && r.workout.photo) photoCount++;
       if (r.hospital) hospitalCount++;
 
-      if (r.workout.type) {
+      if (r.workout && r.workout.type) {
         typeCountMap[r.workout.type] = (typeCountMap[r.workout.type] || 0) + 1;
       }
     });
@@ -897,7 +1150,7 @@
 
     // 월경 요약
     const cycleContainer = document.getElementById('cycle-summary-content');
-    const recentCycle = records.find(r => r.cycle && r.cycle.flow !== '해당없음');
+    const recentCycle = recordsData.find(r => r.cycle && r.cycle.flow !== '해당없음');
     if (recentCycle) {
       cycleContainer.innerHTML = `
         <div>• <b>가장 최근 기록일:</b> ${recentCycle.date}</div>
@@ -912,30 +1165,29 @@
   // 일지 목록 렌더링
   function renderRecords() {
     const container = document.getElementById('recordsContainer');
-    const records = JSON.parse(localStorage.getItem('fitness_diary_data') || '[]');
 
-    if (records.length === 0) {
-      container.innerHTML = '<div class="empty-state">등록된 일지가 없습니다.<br>"기록 작성" 탭에서 첫 일지를 작성해보세요.</div>';
+    if (recordsData.length === 0) {
+      container.innerHTML = `<div class="empty-state">등록된 일지가 없습니다.${isViewOnly ? '' : '<br>"기록 작성" 탭에서 첫 일지를 작성해보세요.'}</div>`;
       return;
     }
 
     let html = '';
-    records.forEach(item => {
+    recordsData.forEach(item => {
       html += `
         <div class="history-card">
           <div class="history-date">
             <span>📅 ${item.date}</span>
-            <button class="del-btn" onclick="deleteRecord(${item.id})">삭제</button>
+            ${!isViewOnly ? `<button class="del-btn" onclick="deleteRecord('${item.date}')">삭제</button>` : ''}
           </div>
 
           <!-- 식단 -->
           <div class="log-item">
             <span class="badge badge-meal">식단</span><br>
-            ${item.meals.breakfast ? `<div>• <b>아침:</b> ${item.meals.breakfast}</div>` : ''}
-            ${item.meals.lunch ? `<div>• <b>점심:</b> ${item.meals.lunch}</div>` : ''}
-            ${item.meals.dinner ? `<div>• <b>저녁:</b> ${item.meals.dinner}</div>` : ''}
-            ${item.meals.snack ? `<div>• <b>간식/수분:</b> ${item.meals.snack}</div>` : ''}
-            ${item.meals.photo ? `
+            ${item.meals && item.meals.breakfast ? `<div>• <b>아침:</b> ${item.meals.breakfast}</div>` : ''}
+            ${item.meals && item.meals.lunch ? `<div>• <b>점심:</b> ${item.meals.lunch}</div>` : ''}
+            ${item.meals && item.meals.dinner ? `<div>• <b>저녁:</b> ${item.meals.dinner}</div>` : ''}
+            ${item.meals && item.meals.snack ? `<div>• <b>간식/수분:</b> ${item.meals.snack}</div>` : ''}
+            ${item.meals && item.meals.photo ? `
               <div class="record-gallery">
                 <div class="thumb-wrap" onclick="openModal('${item.meals.photo}')">
                   <img src="${item.meals.photo}" alt="식단 사진">
@@ -946,9 +1198,9 @@
           <!-- 운동 -->
           <div class="log-item">
             <span class="badge badge-workout">운동</span><br>
-            ${item.workout.type ? `<b>[${item.workout.type}]</b> ` : ''}
-            ${item.workout.detail ? item.workout.detail.replace(/\n/g, '<br>') : '<span style="color:#94a3b8;">(세부 운동 미기록)</span>'}
-            ${item.workout.photo ? `
+            ${item.workout && item.workout.type ? `<b>[${item.workout.type}]</b> ` : ''}
+            ${item.workout && item.workout.detail ? item.workout.detail.replace(/\n/g, '<br>') : '<span style="color:#94a3b8;">(세부 운동 미기록)</span>'}
+            ${item.workout && item.workout.photo ? `
               <div class="record-gallery">
                 <div class="thumb-wrap" onclick="openModal('${item.workout.photo}')">
                   <img src="${item.workout.photo}" alt="운동 인증 사진">
@@ -970,7 +1222,7 @@
           </div>` : ''}
 
           <!-- 월경 -->
-          ${item.cycle.flow !== '해당없음' || item.cycle.memo ? `
+          ${item.cycle && (item.cycle.flow !== '해당없음' || item.cycle.memo) ? `
           <div class="log-item">
             <span class="badge badge-cycle">월경 정보</span><br>
             • <b>생리양:</b> ${item.cycle.flow}
@@ -983,12 +1235,15 @@
     container.innerHTML = html;
   }
 
-  function deleteRecord(id) {
-    if (!confirm('해당 날짜의 기록을 삭제하시겠습니까?')) return;
-    let records = JSON.parse(localStorage.getItem('fitness_diary_data') || '[]');
-    records = records.filter(r => r.id !== id);
-    localStorage.setItem('fitness_diary_data', JSON.stringify(records));
-    renderRecords();
+  async function deleteRecord(docDate) {
+    if (isViewOnly) return;
+    if (!confirm(`${docDate} 일지를 클라우드에서 삭제하시겠습니까?`)) return;
+    try {
+      await db.collection('users').doc(activeUserId).collection('records').doc(docDate).delete();
+      showToast('삭제 완료되었습니다.');
+    } catch (e) {
+      alert('삭제 중 오류: ' + e.message);
+    }
   }
 
   function openModal(src) {
@@ -1000,8 +1255,8 @@
     document.getElementById('imageModal').style.display = 'none';
   }
 
-  // 초기 로딩 시 대시보드 렌더링
-  renderDashboard();
+  // 앱 구동
+  initDataListener();
 </script>
 
 </body>
